@@ -1,0 +1,917 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="./resources/ol.css">
+        <link rel="stylesheet" href="resources/fontawesome-all.min.css">
+        <link href="resources/photon-geocoder-autocomplete.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="./resources/ol-layerswitcher.css">
+        <link rel="stylesheet" href="./resources/qgis2web.css">
+        <style>
+        html, body {
+            background-color: #ffffff;
+        }
+        .ol-control > * {
+            background-color: #f8f8f8!important;
+            color: #444444!important;
+            border-radius: 0px;
+        }
+        .ol-attribution a, .gcd-gl-input::placeholder, .search-layer-input-search::placeholder {
+            color: #444444!important;
+        }
+        .search-layer-input-search {
+            background-color: #f8f8f8!important;
+        }
+        .ol-control > *:focus, .ol-control >*:hover {
+            background-color: rgba(248, 248, 248, 0.7)!important;
+        } 
+        .ol-control {
+            background-color: rgba(255,255,255,.4) !important;
+            padding: 2px !important;
+        } 
+        </style>
+        <style>
+/* UI container */
+  
+  #search-card, #legend-card {
+    background: rgba(255,255,255,0.95);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    padding: 10px;
+    margin-bottom: 14px;
+  }
+
+  #search-input {
+    padding: 6px;
+    width: 100%;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+  #right-panels {
+    top: 50% !important;
+    transform: translateY(-50%);
+    right: 12px;
+    position: absolute;
+}
+#geo-logo {
+    position: absolute;
+    bottom: 15px;
+    left: 15px;
+    z-index: 9999;
+    background: rgba(255,255,255,0.9);
+    padding: 4px 6px;
+    border-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
+
+#geo-logo img {
+    height: 42px;
+    width: auto;
+    display: block;
+}
+
+
+
+  #download-pdf { background: #0073ff; color: #fff; padding: 10px; border-radius: 4px; cursor: pointer; font-weight:bold; width:100%; display:none; }
+  #search-btn { background: #0073ff; color:#fff; border-radius:4px; padding:6px 8px; cursor:pointer; border:0; }
+  #reset-view { background:#666; color:#fff; border-radius:4px; padding:6px; cursor:pointer; border:0; }
+
+  /* Legend small styles */
+  #legend img { display:inline-block; vertical-align: middle; margin-right:6px; }
+  #legend { font-size:13px; line-height:1.5; }
+
+  /* Map container */
+  html, body, #map { width:100%; height:100%; padding:0; margin:0; }
+
+  /* Small responsive adjustments */
+  @media (max-width:900px){
+    #right-panels { width: 260px; right:8px; top:10px; }
+  }
+
+  html, body, #map {
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      margin: 0;
+  }
+        </style>
+        <title></title>
+    </head>
+    <body>
+        <div id="map">
+            
+            <div id="geo-logo">
+    <img src="images/logo.jpg" alt="Geoinfotech Logo">
+</div>
+
+         <!-- ============================= -->
+<!-- LEFT-SIDE COMPARISON PANEL -->
+<!-- ============================= -->
+<div id="compare-panel" style="
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%);
+    width: 260px;
+    background: rgba(255,255,255,0.95);
+    padding: 14px;
+    border-radius: 8px;
+    z-index: 9999;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    font-family: sans-serif;
+">
+
+    <div style="font-weight:700; margin-bottom:10px;">Compare Regions</div>
+
+    <div style="font-weight:600; margin-bottom:4px;">Region A</div>
+
+    <select id="a-state" style="width:100%; padding:6px; margin-bottom:6px;">
+        <option value="">State</option>
+    </select>
+
+    <select id="a-lga" style="width:100%; padding:6px; margin-bottom:6px;">
+        <option value="">LGA</option>
+    </select>
+
+    <select id="a-ward" style="width:100%; padding:6px; margin-bottom:10px;">
+        <option value="">Ward</option>
+    </select>
+
+
+    <div style="font-weight:600; margin-bottom:4px;">Region B</div>
+
+    <select id="b-state" style="width:100%; padding:6px; margin-bottom:6px;">
+        <option value="">State</option>
+    </select>
+
+    <select id="b-lga" style="width:100%; padding:6px; margin-bottom:6px;">
+        <option value="">LGA</option>
+    </select>
+
+    <select id="b-ward" style="width:100%; padding:6px; margin-bottom:10px;">
+        <option value="">Ward</option>
+    </select>
+
+    <button id="compare-btn" style="
+        width:100%;
+        padding:10px;
+        background:#0073ff;
+        color:#fff;
+        border-radius:4px;
+        cursor:pointer;
+        font-weight:bold;
+        margin-bottom:10px;
+    ">Compare</button>
+
+    <div id="comparison-result" style="font-size:13px; color:#333; margin-top:8px;">
+        Select regions and click "Compare" 
+    </div>
+
+</div>
+
+     
+            <!-- START: RIGHT-SIDE UI PANELS (Search + Legend + Reset + PDF) -->
+<div id="right-panels" style="right: 12px; width: 320px; max-width:38vw; z-index: 1000;">
+
+
+  <!-- Search card -->
+  <div id="search-card" style="background: rgba(255,255,255,0.95); border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,0.08); padding:10px; margin-bottom:8px;">
+    <div style="font-weight:700; margin-bottom:6px;">Search region</div>
+    
+
+    <select id="search-level" style="width:100%; padding:6px; margin-bottom:8px; border:1px solid #ddd; border-radius:4px;">
+      <option value="state">State</option>
+      <option value="lga">LGA</option>
+      <option value="ward">Ward</option>
+    </select>
+
+    <input id="search-input" placeholder="Enter name…" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; margin-bottom:8px;" />
+
+    <div style="display:flex; gap:8px;">
+      <button id="search-btn" style="flex:1; padding:8px; background:#1f6feb; color:#fff; border:none; border-radius:4px; font-weight:600; cursor:pointer;">Search</button>
+      <button id="reset-view" title="Reset view" style="width:40px; padding:6px; background:#fff; border:1px solid #ddd; border-radius:4px; cursor:pointer;">⤾</button>
+    </div>
+
+    <button id="download-pdf" style="width:100%; margin-top:8px; padding:8px; display:none; background:#222; color:#fff; border:none; border-radius:4px; cursor:pointer;">Download PDF</button>
+  </div>
+  
+
+  
+  <!-- Comparison placeholder (will be filled later) -->
+  <div id="comparison-card" style="display:none; background: rgba(255,255,255,0.95); border-radius:6px; padding:10px; box-shadow:0 6px 18px rgba(0,0,0,0.06);">
+    <div style="font-weight:700; margin-bottom:6px;">Comparison (A vs B)</div>
+    <div id="comparison-output" style="font-size:13px; color:#333;">Waiting for comparison…</div>
+    <button id="download-comparison-pdf" style="width:100%; margin-top:8px; padding:8px; background:#444; color:#fff; border:none; border-radius:4px; cursor:pointer; display:none;">Download Comparison PDF</button>
+  </div>
+
+</div>
+<!-- END: RIGHT-SIDE UI PANELS -->
+
+            <div id="popup" class="ol-popup">
+                <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+                <div id="popup-content"></div>
+            </div>
+        </div>
+        <script src="resources/qgis2web_expressions.js"></script>
+<script src="resources/proj4.js"></script>
+        <script>proj4.defs('EPSG:4326','+proj=longlat +datum=WGS84 +no_defs');</script>
+        <script src="./resources/functions.js"></script>
+        <script src="./resources/ol.js"></script>
+        <script src="./resources/ol-layerswitcher.js"></script>
+        <script src="resources/photon-geocoder-autocomplete.min.js"></script>
+        <script src="layers/risk_0.js"></script><script src="layers/military_1.js"></script><script src="layers/majorroads_2.js"></script><script src="layers/police_3.js"></script><script src="layers/checkpoints_4.js"></script><script src="layers/boundary_5.js"></script>
+        <script src="styles/risk_0_style.js"></script><script src="styles/military_1_style.js"></script><script src="styles/majorroads_2_style.js"></script><script src="styles/police_3_style.js"></script><script src="styles/checkpoints_4_style.js"></script><script src="styles/boundary_5_style.js"></script>
+        <script src="./layers/layers.js" type="text/javascript"></script> 
+        <script src="./resources/Autolinker.min.js"></script>
+        <script src="./resources/qgis2web.js"></script>  
+        
+        
+     <script>
+// --- SEARCH FUNCTION (Corrected) --- //
+document.getElementById("search-btn").addEventListener("click", function () {
+
+    const level = document.getElementById("search-level").value;  
+    const query = document.getElementById("search-input").value.trim().toLowerCase();
+
+    if (!query) {
+        alert("Enter a name");
+        return;
+    }
+
+    let targetField = "";
+    if (level === "state") targetField = "statename";
+    if (level === "lga") targetField = "lganame";
+    if (level === "ward") targetField = "wardname";
+
+    let foundFeature = null;
+
+    layersList.forEach(layer => {
+        const src = layer.getSource();
+        if (!src) return;
+
+        src.getFeatures().forEach(f => {
+            const value = (f.get(targetField) || "").toString().toLowerCase();
+            if (value === query || value.includes(query)) {
+                foundFeature = f;
+            }
+        });
+    });
+
+    if (!foundFeature) {
+        alert("No matching location found.");
+        return;
+    }
+
+    const extent = foundFeature.getGeometry().getExtent();
+    map.getView().fit(extent, {
+        padding: [60, 60, 60, 60],
+        maxZoom: 11,
+        duration: 700
+    });
+
+   const interpretation = classifyRisk(foundFeature);
+
+window._SEARCH_RESULT = {
+    name: foundFeature.get(targetField),
+    narrative: interpretation.narrative,
+    riskClass: interpretation.class
+};
+
+
+    // Show PDF button
+    document.getElementById("download-pdf").style.display = "block";
+});
+
+
+
+
+// =====================================
+// DROPDOWNS USING boundary_5 LAYER
+// =====================================
+
+function waitForBoundary(cb) {
+    let tries = 40;
+    (function check() {
+        if (typeof lyr_boundary_5 !== "undefined") return cb(lyr_boundary_5);
+
+        if (typeof layersList !== "undefined") {
+            let found = layersList.find(l => {
+                let t = (l.get("title") || "").toString().toLowerCase();
+                return t.includes("boundary");
+            });
+            if (found) return cb(found);
+        }
+
+        if (--tries <= 0) return cb(null);
+        setTimeout(check, 150);
+    })();
+}
+
+waitForBoundary(function(boundaryLayer) {
+    if (!boundaryLayer) {
+        console.error("Boundary layer not found.");
+        return;
+    }
+
+    function waitForFeatures(cb) {
+        let tries = 40;
+        (function check() {
+            let f = boundaryLayer.getSource().getFeatures();
+            if (f.length > 0) return cb(f);
+            if (--tries <= 0) return cb([]);
+            setTimeout(check, 100);
+        })();
+    }
+
+    waitForFeatures(function(features) {
+        if (!features.length) {
+            console.error("No boundary features.");
+            return;
+        }
+
+        let clean = v => (v == null ? "" : String(v).trim());
+
+        let states = {};
+
+        features.forEach(f => {
+            let s = clean(f.get("statename"));
+            let l = clean(f.get("lganame"));
+            let w = clean(f.get("wardname"));
+
+            if (!s) return;
+
+            if (!states[s]) states[s] = {};
+            if (l && !states[s][l]) states[s][l] = new Set();
+            if (l && w) states[s][l].add(w);
+        });
+
+        let STATE_LIST = Object.keys(states).sort();
+
+        let $ = id => document.getElementById(id);
+
+        // Fill state selects
+        ["a-state","b-state"].forEach(id => {
+            let el = $(id);
+            if (!el) return;
+            el.innerHTML = "<option value=''>State</option>";
+            STATE_LIST.forEach(s => el.innerHTML += `<option>${s}</option>`);
+        });
+
+        // A - cascades
+        $("a-state").addEventListener("change", e => {
+            let s = e.target.value;
+            $("a-lga").innerHTML = "<option>LGA</option>";
+            $("a-ward").innerHTML = "<option>Ward</option>";
+
+            if (states[s]) {
+                Object.keys(states[s]).sort()
+                    .forEach(l => $("a-lga").innerHTML += `<option>${l}</option>`);
+            }
+        });
+
+        $("a-lga").addEventListener("change", e => {
+            let s = $("a-state").value;
+            let l = e.target.value;
+
+            $("a-ward").innerHTML = "<option>Ward</option>";
+
+            if (states[s] && states[s][l]) {
+                Array.from(states[s][l]).sort()
+                    .forEach(w => $("a-ward").innerHTML += `<option>${w}</option>`);
+            }
+        });
+
+        // B - cascades
+        $("b-state").addEventListener("change", e => {
+            let s = e.target.value;
+            $("b-lga").innerHTML = "<option>LGA</option>";
+            $("b-ward").innerHTML = "<option>Ward</option>";
+
+            if (states[s]) {
+                Object.keys(states[s]).sort()
+                    .forEach(l => $("b-lga").innerHTML += `<option>${l}</option>`);
+            }
+        });
+
+        $("b-lga").addEventListener("change", e => {
+            let s = $("b-state").value;
+            let l = e.target.value;
+
+            $("b-ward").innerHTML = "<option>Ward</option>";
+
+            if (states[s] && states[s][l]) {
+                Array.from(states[s][l]).sort()
+                    .forEach(w => $("b-ward").innerHTML += `<option>${w}</option>`);
+            }
+        });
+
+        console.log("Dropdowns loaded from boundary_5");
+    });
+});
+</script>
+
+
+<script>
+function classifyRegionStats(stats) {
+    const adjusted = Number(stats.adjusted) || 0;
+
+    if (adjusted > 70) return "High";
+    if (adjusted >= 30) return "Medium";
+    return "Low";
+}
+</script>
+<script>        
+// =============================================
+// NEW COMPARISON ENGINE (Option A)
+// Metrics: adjusted_risk_score, road_density, security_presence
+// =============================================
+
+// 1. Wait for risk layer
+function getRiskLayer() {
+    if (typeof lyr_risk_0 !== "undefined") return lyr_risk_0;
+
+    if (typeof layersList !== "undefined") {
+        return layersList.find(l => {
+            let t = (l.get("title") || "").toString().toLowerCase();
+            return t.includes("risk");
+        });
+    }
+    return null;
+}
+
+// 2. Fetch features safely
+function waitForRiskFeatures(layer, cb) {
+    let tries = 40;
+    (function check() {
+        let f = layer.getSource().getFeatures();
+        if (f.length > 0) return cb(f);
+        if (--tries <= 0) return cb([]);
+        setTimeout(check, 120);
+    })();
+}
+
+// 3. Run comparison on click
+document.getElementById("compare-btn").addEventListener("click", function () {
+    const SA = document.getElementById("a-state").value.trim();
+    const LA = document.getElementById("a-lga").value.trim();
+    const WA = document.getElementById("a-ward").value.trim();
+
+    const SB = document.getElementById("b-state").value.trim();
+    const LB = document.getElementById("b-lga").value.trim();
+    const WB = document.getElementById("b-ward").value.trim();
+
+    let riskLayer = getRiskLayer();
+    if (!riskLayer) {
+        alert("Risk layer missing.");
+        return;
+    }
+
+    waitForRiskFeatures(riskLayer, function (features) {
+        if (!features.length) {
+            alert("Risk layer has no features.");
+            return;
+        }
+
+        function matchFlexible(f, st, lg, wd) {
+    const S = (f.get("statename") || "").toLowerCase();
+    const L = (f.get("lganame") || "").toLowerCase();
+    const W = (f.get("wardname") || "").toLowerCase();
+
+    st = (st || "").toLowerCase();
+    lg = (lg || "").toLowerCase();
+    wd = (wd || "").toLowerCase();
+
+    // 1. Exact Ward match (strongest)
+    if (wd && W === wd) return true;
+
+    // 2. Ward contains (fallback)
+    if (wd && W.includes(wd)) return true;
+
+    // 3. Exact LGA
+    if (lg && L === lg) return true;
+
+    // 4. LGA contains
+    if (lg && L.includes(lg)) return true;
+
+    // 5. Exact State
+    if (st && S === st) return true;
+
+    // 6. State contains
+    if (st && S.includes(st)) return true;
+
+    return false;
+}
+
+
+
+
+        const regionA = features.filter(f => matchFlexible(f, SA, LA, WA));
+const regionB = features.filter(f => matchFlexible(f, SB, LB, WB));
+
+
+        if (regionA.length === 0) {
+    alert("Region A has no matching features in the risk layer.");
+    return;
+}
+if (regionB.length === 0) {
+    alert("Region B has no matching features in the risk layer.");
+    return;
+}
+
+        // Metrics to compute averages
+        function avg(arr) {
+            if (!arr.length) return 0;
+            return (arr.reduce((a,b)=>a+b,0) / arr.length).toFixed(2);
+        }
+
+        function getStats(region) {
+            return {
+                count: region.length,
+                adjusted: avg(region.map(f => Number(f.get("adjusted_risk_score")) || 0)),
+                roads: avg(region.map(f => Number(f.get("road_density")) || 0)),
+                security: avg(region.map(f => Number(f.get("security_presence")) || 0))
+            };
+        }
+
+        let A = getStats(regionA);
+        let B = getStats(regionB);
+
+        // Summary (this will go into PDF later)
+        let Aclass = classifyRegionStats(A);
+let Bclass = classifyRegionStats(B);
+
+let rank = { "Low": 1, "Medium": 2, "High": 3 };
+
+let saferRegion = "";
+if (rank[Aclass] < rank[Bclass]) saferRegion = "Region A";
+else if (rank[Bclass] < rank[Aclass]) saferRegion = "Region B";
+else saferRegion = Number(A.adjusted) < Number(B.adjusted) ? "Region A" : "Region B";
+
+let summary = {
+    A, B,
+    chosenA: { state: SA, lga: LA, ward: WA },
+    chosenB: { state: SB, lga: LB, ward: WB },
+    riskA: Aclass,
+    riskB: Bclass,
+    safer: saferRegion
+};
+
+
+        // Store globally for PDF access later
+        window._COMPARE_RESULT = summary;
+// --- Build dynamic narrative for comparison PDF ---
+let comparisonText = "";
+
+// Intro
+comparisonText += 
+    "The comparative security exposure assessment for the two selected regions was derived from the adjusted risk score, " +
+    "road accessibility indicators, and the distribution of security infrastructure within each area. " +
+    "These metrics collectively describe the vulnerability pattern and operational readiness of both regions.\n\n";
+
+// Region A section
+comparisonText += 
+    `Region A is classified as ${summary.riskA} risk. ` +
+    `Its average adjusted risk score is interpreted as a reflection of its overall exposure profile. ` +
+    `The derived road accessibility metric suggests how easily movement can be supported within the region, while the security presence level indicates the availability of protective infrastructure. ` +
+    "The combination of these indicators places Region A within its assigned risk class.\n\n";
+
+// Region B section
+comparisonText += 
+    `Region B is classified as ${summary.riskB} risk. ` +
+    "The evaluated metrics place this region in a different exposure category compared to Region A. " +
+    "Its structural indicators and the balance between accessibility and security presence contribute to the assigned risk level. " +
+    "The region’s operational environment may therefore present a different pattern of constraints or readiness.\n\n";
+
+// Direct comparison
+comparisonText += 
+    "When the two regions are compared side by side, their relative vulnerability becomes clearer. " +
+    `Region A shows a risk classification of ${summary.riskA}, while Region B shows a classification of ${summary.riskB}. ` +
+    "This difference reflects how the underlying metrics interact within each area and how they shape security exposure.\n\n";
+
+// Safer region conclusion
+comparisonText += 
+    `Based on the evaluated indicators, ${summary.safer} demonstrates comparatively lower exposure within the available dataset. ` +
+    "This region therefore aligns more closely with stable or less constrained operational conditions. " +
+    "The less favourable region requires greater awareness, structured planning, and increased monitoring to minimise potential disruptions.\n\n";
+
+// Store narrative globally for the PDF button
+window._COMPARE_PDF_TEXT = comparisonText;
+
+        // UI output
+        document.getElementById("comparison-output").innerHTML = `
+            <div><strong>Region A</strong></div>
+            <div>Avg Adjusted Risk: ${A.adjusted}</div>
+            <div>Avg Road Density: ${A.roads}</div>
+            <div>Avg Security Presence: ${A.security}</div>
+
+            <hr>
+
+            <div><strong>Region B</strong></div>
+            <div>Avg Adjusted Risk: ${B.adjusted}</div>
+            <div>Avg Road Density: ${B.roads}</div>
+            <div>Avg Security Presence: ${B.security}</div>
+
+            <hr>
+            <div><strong>Safer Region:</strong> ${summary.safer}</div>
+        `;
+
+        document.getElementById("download-comparison-pdf").style.display = "block";
+            document.getElementById("comparison-card").style.display = "block";
+    });
+    
+});
+</script>
+
+<!-- jsPDF + Autotable -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+// ==========================================================
+//  COMPARISON PDF GENERATION (A4, Justified, Line spacing 1.5)
+// ==========================================================
+
+function generateComparisonPDF(regionAInfo, regionBInfo, comparisonText) {
+    const { jsPDF } = window.jspdf;
+
+    const doc = new jsPDF({
+        unit: "pt",
+        format: "a4"
+    });
+
+    const left = 50;
+    let y = 60;
+
+    // --- LOGO ---
+    try {
+        doc.addImage("images/logo.jpg", "JPEG", left, y, 60, 60);
+    } catch (e) {
+        console.warn("Logo missing or cannot be loaded.");
+    }
+
+    // --- HEADER ---
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("GEOINFOTECH RESOURCES LIMITED", 300, y + 20, { align: "center" });
+
+    doc.setFontSize(13);
+    doc.text("SECURITY INFRASTRUCTURE REPORT", 300, y + 45, { align: "center" });
+
+    y += 100;
+
+    // --- SELECTED REGIONS ---
+    doc.setFontSize(11);
+    doc.setFont("Helvetica", "bold");
+    doc.text("REGION A:", left, y);
+    doc.setFont("Helvetica", "normal");
+    doc.text(regionAInfo, left + 90, y);
+
+    y += 20;
+
+    doc.setFont("Helvetica", "bold");
+    doc.text("REGION B:", left, y);
+    doc.setFont("Helvetica", "normal");
+    doc.text(regionBInfo, left + 90, y);
+
+    y += 35;
+
+    // --- SUMMARY TITLE ---
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("COMPARATIVE SECURITY RISK SUMMARY", left, y);
+    y += 20;
+
+    // --- BODY TEXT (JUSTIFIED, 1.5 LINE SPACING) ---
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(11);
+
+    const bodyLines = doc.splitTextToSize(comparisonText, 500);
+
+    bodyLines.forEach(line => {
+        doc.text(line, left, y, { align: "justify" });
+        y += 16;  // line spacing 1.5 for small font
+    });
+
+    // --- FOOTER ---
+    y = 780;
+    doc.setFontSize(9);
+    doc.setFont("Helvetica", "bold");
+    doc.text(
+        "Oluwalogbon House, Obafemi Awolowo Way Alausa Ikeja Lagos NG, Obafemi Awolowo Way, Lagos 101233",
+        300,
+        y,
+        { align: "center" }
+    );
+
+    y += 14;
+
+    doc.text(
+        "0816 322 2177  |  +234 816 322 2177  |  +234 813 410 1202",
+        300,
+        y,
+        { align: "center" }
+    );
+
+    y += 14;
+
+    doc.text(
+        "contact@geoinfotech.ng  |  mail@geoinfotech.ng",
+        300,
+        y,
+        { align: "center" }
+    );
+
+    // Save PDF
+    doc.save("comparison_report.pdf");
+}
+
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const btn = document.getElementById("download-comparison-pdf");
+
+    btn.addEventListener("click", function () {
+        const d = window._COMPARE_RESULT;
+        if (!d) {
+            alert("Compare first.");
+            return;
+        }
+
+        const regionAInfo = `${d.chosenA.state || ''}, ${d.chosenA.lga || ''}, ${d.chosenA.ward || ''}`;
+        const regionBInfo = `${d.chosenB.state || ''}, ${d.chosenB.lga || ''}, ${d.chosenB.ward || ''}`;
+
+        generateComparisonPDF(regionAInfo, regionBInfo, window._COMPARE_PDF_TEXT || "");
+    });
+
+});
+</script>
+
+<script>
+
+function generateSearchPDF(regionName, narrative, riskClass) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF("p", "mm", "a4");
+
+    let y = 20;
+
+    // Logo
+    const logo = new Image();
+    logo.src = "images/logo.jpg";
+
+    logo.onload = function () {
+        doc.addImage(logo, "JPEG", 15, y, 28, 28);
+        y += 5;
+
+        // Header
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text("GEOINFOTECH RESOURCES LIMITED", 105, 25, { align: "center" });
+
+        doc.setFontSize(11);
+        doc.text("SECURITY INFRASTRUCTURE REPORT", 105, 33, { align: "center" });
+
+        y = 55;
+
+        // Region title
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text(`SEARCH RESULT FOR: ${regionName.toUpperCase()}`, 15, y);
+        y += 10;
+
+        // RISK CLASS LABEL
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text(`RISK CLASSIFICATION: ${riskClass.toUpperCase()}`, 15, y);
+        y += 12;
+
+        // Narrative text
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+
+        const lines = doc.splitTextToSize(narrative, 180);
+        lines.forEach(line => {
+            doc.text(line, 15, y, { align: "justify" });
+            y += 6 * 1.5;      // 1.5 line spacing
+        });
+
+        // Footer
+        y = 272;
+        doc.setFontSize(9);
+        doc.text(
+            "Oluwalogbon House, Obafemi Awolowo Way, Alausa Ikeja Lagos NG, Obafemi Awolowo Way, Lagos 101233",
+            105, y, { align: "center" }
+        );
+
+        y += 5;
+        doc.text("0816 322 2177 | +234 813 410 1202", 105, y, { align: "center" });
+
+        y += 5;
+        doc.text("contact@geoinfotech.ng | mail@geoinfotech.ng", 105, y, { align: "center" });
+
+        // Save
+        doc.save(`Security_Report_${regionName}.pdf`);
+    };
+}
+
+
+document.getElementById("download-pdf").addEventListener("click", function () {
+    const data = window._SEARCH_RESULT;
+    if (!data) {
+        alert("Search first.");
+        return;
+    }
+
+    generateSearchPDF(data.name, data.narrative, data.riskClass);
+
+});
+
+// ===============================================
+// RISK INTERPRETER FOR SEARCH PDF (Low/Medium/High)
+// ===============================================
+function classifyRisk(feature) {
+
+    let adjusted = Number(feature.get("adjusted_risk_score")) || 0;
+    let road = Number(feature.get("road_density")) || 0;
+    let security = Number(feature.get("security_presence")) || 0;
+
+    let riskClass = "";
+
+    // Primary rule
+    if (adjusted > 70) riskClass = "High";
+    else if (adjusted >= 30) riskClass = "Medium";
+    else riskClass = "Low";
+
+    // Fine-tune low risk
+    if (riskClass === "Low") {
+        if (road < 30 && security < 30) {
+            riskClass = "Medium";
+        }
+    }
+
+    // Narrative in same tone as uploaded PDF
+    let narrative = "";
+
+    if (riskClass === "Low") {
+        narrative =
+            "The security exposure for this location is assessed as low. " +
+            "The adjusted risk score indicates minimal vulnerability, reflecting a stable and well-balanced environment. " +
+            "The surrounding structural and infrastructural indicators do not suggest significant operational constraints, " +
+            "indicating that routine movement, monitoring and engagement activities can proceed with comparatively greater confidence. " +
+            "The overall pattern of exposure falls within the lower band of the computed index, denoting reduced susceptibility to disruptive or security-related pressures.";
+    }
+
+    if (riskClass === "Medium") {
+        narrative =
+            "The security exposure for this location is assessed as moderate. " +
+            "While the adjusted risk score does not indicate heightened vulnerability, the distribution of underlying indicators places the location within an intermediate band of the exposure spectrum. " +
+            "This suggests that the environment requires standard levels of awareness and orderly operational planning. " +
+            "The security condition remains stable but not entirely insulated from variability, so field activities should maintain routine situational checks.";
+    }
+
+    if (riskClass === "High") {
+        narrative =
+            "The security exposure for this location is assessed as high. " +
+            "The adjusted risk score reflects a concentration of vulnerability signals, indicating that the location sits within an elevated tier of the exposure index. " +
+            "Operational activities in this area may be more sensitive to emerging disruptions or security pressures and therefore require reinforced awareness, coordinated movement and strengthened planning measures. " +
+            "Engagement within this environment should be accompanied by enhanced monitoring and proactive risk-mitigation strategies.";
+    }
+
+    return {
+        class: riskClass,
+        narrative: narrative
+    };
+}
+
+</script>
+<script>
+
+</script>
+
+<!-- ========================================================
+7. BASEMAP FIX — THIS STAYS LAST
+======================================================== -->
+<script>
+map.getLayers().forEach(function (layer) {
+    if (layer.get('type') === 'base') {
+        map.removeLayer(layer);
+    }
+});
+
+var lyr_BaseMap = new ol.layer.Tile({
+    title: "CartoDB Positron",
+    type: "base",
+    source: new ol.source.XYZ({
+        url: "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        attributions: '© CARTO'
+    })
+});
+
+map.getLayers().insertAt(0, lyr_BaseMap);
+</script>
+   
+    </body>
+</html>
